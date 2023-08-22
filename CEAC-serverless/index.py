@@ -1,10 +1,6 @@
-from typing import Dict, List
 import requests
-import hashlib
-import time
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from pprint import pprint
 import logging
 import onnxruntime as ort
 import numpy as np
@@ -12,7 +8,6 @@ from PIL import Image
 import string
 from io import BytesIO
 import logging
-import time
 import json
 
 logger = logging.getLogger()
@@ -37,8 +32,7 @@ def pred(img_content):
     outputs = ort_sess.run(None, {'input': img})
     x = outputs[0]
     t = np.argmax( np.transpose(x,(1,0,2)), -1)
-    pred = decode(t[0])
-    return pred
+    return decode(t[0])
 
 ERR_CAPTCHA = "The code entered does not match the code displayed on the page."
 ERR_NOCASE = "Your search did not return any data."
@@ -47,7 +41,7 @@ ERR_INVCODE = "Invalid Application ID or Case Number."
 URL = "https://ceac.state.gov/CEACStatTracker/Status.aspx?App=NIV"
 
 s = requests.Session()
-s.headers["User-Agent"]="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0"
+s.headers["User-Agent"] = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0"
 
 
 def read_hidden_input(soup: BeautifulSoup):
@@ -63,24 +57,24 @@ def get_post_data(soup=None):
         soup = BeautifulSoup(html, features="html.parser")
     data = read_hidden_input(soup)
     CaptchaImageUrl = soup.find(id="c_status_ctl00_contentplaceholder1_defaultcaptcha_CaptchaImage").attrs["src"]
-    img_resp = s.get(urljoin(URL,CaptchaImageUrl))
-    data["ctl00$ContentPlaceHolder1$Captcha"]=pred(img_resp.content)
-    data["ctl00_ToolkitScriptManager1_HiddenField"]=";;AjaxControlToolkit, Version=3.5.51116.0, Culture=neutral, PublicKeyToken=28f01b0e84b6d53e:en-US:2a06c7e2-728e-4b15-83d6-9b269fb7261e:de1feab2:f2c8e708:8613aea7:f9cec9bc:3202a5a2:a67c2700:720a52bf:589eaa30:ab09e3fe:87104b7c:be6fb298"
-    data["ctl00$ContentPlaceHolder1$Visa_Application_Type"]="NIV"
-    data["__EVENTTARGET"]="ctl00$ContentPlaceHolder1$btnSubmit"
-    data["ctl00$ToolkitScriptManager1"]="ctl00$ContentPlaceHolder1$UpdatePanel1|ctl00$ContentPlaceHolder1$btnSubmit"
-    data["LBD_BackWorkaround_c_status_ctl00_contentplaceholder1_defaultcaptcha"]="1"
-    data["__EVENTARGUMENT"]=""
-    data["__LASTFOCUS"]=""
+    img_resp = s.get(urljoin(URL, CaptchaImageUrl))
+    data["ctl00$ContentPlaceHolder1$Captcha"] = pred(img_resp.content)
+    data["ctl00_ToolkitScriptManager1_HiddenField"] = ";;AjaxControlToolkit, Version=3.5.51116.0, Culture=neutral, PublicKeyToken=28f01b0e84b6d53e:en-US:2a06c7e2-728e-4b15-83d6-9b269fb7261e:de1feab2:f2c8e708:8613aea7:f9cec9bc:3202a5a2:a67c2700:720a52bf:589eaa30:ab09e3fe:87104b7c:be6fb298"
+    data["ctl00$ContentPlaceHolder1$Visa_Application_Type"] = "NIV"
+    data["__EVENTTARGET"] = "ctl00$ContentPlaceHolder1$btnSubmit"
+    data["ctl00$ToolkitScriptManager1"] = "ctl00$ContentPlaceHolder1$UpdatePanel1|ctl00$ContentPlaceHolder1$btnSubmit"
+    data["LBD_BackWorkaround_c_status_ctl00_contentplaceholder1_defaultcaptcha"] = "1"
+    data["__EVENTARGUMENT"] = ""
+    data["__LASTFOCUS"] = ""
     return data
 
 def query_ceac_state(loc, case_no, pp_no, surname, data=None):
     if data is None:
         data = get_post_data()
-    data["ctl00$ContentPlaceHolder1$Location_Dropdown"]=loc
-    data["ctl00$ContentPlaceHolder1$Visa_Case_Number"]=case_no
-    data["ctl00$ContentPlaceHolder1$Passport_Number"]=pp_no
-    data["ctl00$ContentPlaceHolder1$Surname"]=surname
+    data["ctl00$ContentPlaceHolder1$Location_Dropdown"] = loc
+    data["ctl00$ContentPlaceHolder1$Visa_Case_Number"] = case_no
+    data["ctl00$ContentPlaceHolder1$Passport_Number"] = pp_no
+    data["ctl00$ContentPlaceHolder1$Surname"] = surname
 
     resp = s.post(URL,data)
     soup = BeautifulSoup(resp.text, features="html.parser")
@@ -97,18 +91,18 @@ def query_ceac_state(loc, case_no, pp_no, surname, data=None):
     SubmitDate = soup.find(id="ctl00_ContentPlaceHolder1_ucApplicationStatusView_lblSubmitDate").text
     StatusDate = soup.find(id="ctl00_ContentPlaceHolder1_ucApplicationStatusView_lblStatusDate").text
     Message = soup.find(id="ctl00_ContentPlaceHolder1_ucApplicationStatusView_lblMessage").text
-    assert caseno == case_no    
+    assert caseno == case_no
     return (status,SubmitDate,StatusDate,Message), soup
 
 
 def query_ceac_state_safe(loc, case_no, pp_no, surname, soup=None):
-    for _ in range(5):
+    for _ in range(10):
         try:
             data = get_post_data(soup)
             result, soup = query_ceac_state(loc, case_no, pp_no, surname, data)
-            logger.info("Info!,%s-%s: %s",loc, case_no, pp_no, surname, result)
+            logger.info("Info!,%s-%s-%s-%s: %s",loc, case_no, pp_no, surname, result)
         except Exception as e:
-            logger.error("Error!,%s-%s: %s",loc, case_no, pp_no, surname, e)
+            logger.error("Error!,%s-%s-%s-%s: %s",loc, case_no, pp_no, surname, e)
             return str(e), None
         if result != ERR_CAPTCHA:
             break
@@ -118,15 +112,14 @@ def query_ceac_state_safe(loc, case_no, pp_no, surname, soup=None):
 def main_handler(event, context):
     req = json.loads(event.body)
     ret = {}
-    for loc, case_no in req:
+    for loc, case_no, pp_no, surname in req:
         result, soup = query_ceac_state_safe(loc, case_no, pp_no, surname, soup)
         ret[case_no] = result
     return json.dumps(ret)
 
 if __name__ == "__main__":
-    req = [("TOR","AA00C9KGYV", "E12345678", "ZHOU")]
+    req = [("TRT", "AA00C9KGYV", "E86183032", "ZHOU")]
     soup = None
-    for loc, case_no in req:
+    for loc, case_no, pp_no, surname in req:
         result, soup = query_ceac_state_safe(loc, case_no, pp_no, surname, soup)
         print(result)
-
