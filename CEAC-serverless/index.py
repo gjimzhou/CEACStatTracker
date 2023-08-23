@@ -17,7 +17,7 @@ width, height, n_len, n_classes = 200, 50, 6, len(characters)
 
 def decode(sequence):
     a = ''.join([characters[x] for x in sequence])
-    s = ''.join([x for j, x in enumerate(a[:-1]) if x != characters[0] and x != a[j+1]])
+    s = ''.join([x for j, x in enumerate(a[:-1]) if x != characters[0] and x != a[j + 1]])
     if len(s) == 0:
         return ''
     if a[-1] != characters[0] and s[-1] != a[-1]:
@@ -26,12 +26,12 @@ def decode(sequence):
 
 
 def pred(img_content):
-    img = np.asarray( Image.open(BytesIO(img_content)) ,dtype=np.float32) / 255.0
-    img = np.expand_dims(np.transpose(img,(2,0,1)), axis=0)
+    img = np.asarray(Image.open(BytesIO(img_content)), dtype=np.float32) / 255.0
+    img = np.expand_dims(np.transpose(img, (2, 0, 1)), axis=0)
     ort_sess = ort.InferenceSession('captcha.onnx')
     outputs = ort_sess.run(None, {'input': img})
     x = outputs[0]
-    t = np.argmax( np.transpose(x,(1,0,2)), -1)
+    t = np.argmax(np.transpose(x, (1, 0, 2)), -1)
     return decode(t[0])
 
 ERR_CAPTCHA = "The code entered does not match the code displayed on the page."
@@ -76,7 +76,7 @@ def query_ceac_state(loc, case_no, pp_no, surname, data=None):
     data["ctl00$ContentPlaceHolder1$Passport_Number"] = pp_no
     data["ctl00$ContentPlaceHolder1$Surname"] = surname
 
-    resp = s.post(URL,data)
+    resp = s.post(URL, data)
     soup = BeautifulSoup(resp.text, features="html.parser")
 
     error_text = soup.find(id="ctl00_ContentPlaceHolder1_ValidationSummary1").text.strip()
@@ -92,7 +92,7 @@ def query_ceac_state(loc, case_no, pp_no, surname, data=None):
     StatusDate = soup.find(id="ctl00_ContentPlaceHolder1_ucApplicationStatusView_lblStatusDate").text
     Message = soup.find(id="ctl00_ContentPlaceHolder1_ucApplicationStatusView_lblMessage").text
     assert caseno == case_no
-    return (status,SubmitDate,StatusDate,Message), soup
+    return (status, SubmitDate, StatusDate, Message), soup
 
 
 def query_ceac_state_safe(loc, case_no, pp_no, surname, soup=None):
@@ -100,9 +100,9 @@ def query_ceac_state_safe(loc, case_no, pp_no, surname, soup=None):
         try:
             data = get_post_data(soup)
             result, soup = query_ceac_state(loc, case_no, pp_no, surname, data)
-            logger.info("Info!,%s-%s-%s-%s: %s",loc, case_no, pp_no, surname, result)
+            logger.info("Info!, %s-%s-%s-%s: %s",loc, case_no, pp_no, surname, result)
         except Exception as e:
-            logger.error("Error!,%s-%s-%s-%s: %s",loc, case_no, pp_no, surname, e)
+            logger.error("Error!, %s-%s-%s-%s: %s",loc, case_no, pp_no, surname, e)
             return str(e), None
         if result != ERR_CAPTCHA:
             break
