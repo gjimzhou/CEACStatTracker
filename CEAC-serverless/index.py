@@ -121,5 +121,11 @@ if __name__ == "__main__":
     req = [("TRT", "AA00C9KGYV", "E12345678", "ZHOU")]
     soup = None
     for loc, case_no, pp_no, surname in req:
-        result, soup = query_ceac_state_safe(loc, case_no, pp_no, surname, soup)
-        print(result)
+        for _ in range(10):
+            try:
+                result, soup = query_ceac_state_safe(loc, case_no, pp_no, surname, soup)
+                for r in result:
+                    print(r)
+                break
+            except ValueError as e:
+                continue
