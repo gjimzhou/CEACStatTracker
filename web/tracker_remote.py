@@ -1,9 +1,16 @@
+import os
 import requests
 
-URL = ""
+URL = os.environ.get("CEAC_REMOTE_URL", "")
+
+
+def _remote_url():
+    if not URL:
+        raise RuntimeError("CEAC_REMOTE_URL is not configured")
+    return URL
 
 def query_ceac_state_safe(loc, case_no, soup=None):
-    req = requests.post(URL, json=[[loc,case_no]], timeout=100)
+    req = requests.post(_remote_url(), json=[[loc,case_no]], timeout=100)
     ret = req.json()
     return ret[case_no]
 
