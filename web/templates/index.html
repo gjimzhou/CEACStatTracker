@@ -7,6 +7,14 @@
       <input class="form-control" placeholder="AA00ABC123" id="case_no" name="case_no" value="{{ case_no }}" required=required>
   </div>
   <div class="mb-3">
+      <label for="passport_number" class="form-label">Passport Number (required for new case)</label>
+      <input class="form-control" id="passport_number" name="passport_number" autocomplete="off">
+  </div>
+  <div class="mb-3">
+      <label for="surname" class="form-label">Surname (required for new case)</label>
+      <input class="form-control" id="surname" name="surname" autocomplete="off">
+  </div>
+  <div class="mb-3">
       <label for="location" class="form-label">Locations (required for new case)</label> 
       <select id="location" name="location" class="form-select location-select">
         {%for loc in LocationList%}

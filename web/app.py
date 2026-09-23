@@ -38,6 +38,8 @@ class Case(db.Document):
     last_update = db.ReferenceField("Record")
     created_date = db.DateField()
     last_seem = db.DateTimeField(default=datetime.datetime.now)
+    passport_number = db.StringField(max_length=20)
+    surname = db.StringField(max_length=50)
 
     push_channel = db.StringField(max_length=50)
     qr_code_url = db.StringField(max_length=100)
@@ -121,7 +123,7 @@ def crontab_task_remote():
     last_seem_expire = datetime.datetime.now() - datetime.timedelta(hours=4)
     case_list : List[Case] = Case.objects(expire_date__gte=datetime.datetime.today(), last_seem__lte=last_seem_expire)
     for chunk in divide_chunks(case_list,20):
-        req_data = [(case.location, case.case_no) for case in chunk]
+        req_data = [(case.location, case.case_no, case.passport_number or "", case.surname or "") for case in chunk]
         result_dict = query_ceac_state_remote(req_data)
         for case in chunk:
             result = result_dict[case.case_no]
@@ -137,19 +139,28 @@ def import_case():
     if request.method == "POST":
         req = request.form.get("lst")
         for line in req.splitlines():
-            case_no, location = line.split()[:2]
+            parts = line.split()
+            case_no, location = parts[:2]
+            passport_number = parts[2] if len(parts) > 2 else ""
+            surname = parts[3] if len(parts) > 3 else ""
             if not location or location not in LocationDict.keys() :
                 error_list.append(line+"\t># No Location")
                 continue
-            
-            result = query_ceac_state_safe(location,case_no)
+            if not passport_number or not surname:
+                error_list.append(line+"\t># Passport number and surname are required")
+                continue
+
+            result = query_ceac_state_safe(location, case_no, passport_number, surname)
             if isinstance(result,str):
                 error_list.append(line+"\t># "+result)
                 continue
             if Case.objects(case_no=case_no).count() == 1:
                 case = Case.objects(case_no=case_no).first()
+                case.passport_number = passport_number
+                case.surname = surname
             else:
-                case = Case(case_no=case_no, location=location, created_date=parse_date(result[1]))
+                case = Case(case_no=case_no, location=location, created_date=parse_date(result[1]),
+                            passport_number=passport_number, surname=surname)
             case.save()
             case.updateRecord(result, push_msg=False)
             case.renew()
@@ -162,6 +173,8 @@ def index():
     if request.method == "POST":
         case_no = request.form.get("case_no",None)
         location = request.form.get("location",None)
+        passport_number = request.form.get("passport_number","").strip()
+        surname = request.form.get("surname","").strip()
         if not case_no:
             flash("Invaild case no", category="danger")
             return render_template("index.html", case_no=case_no, location=location, LocationList=LocationList)
@@ -171,11 +184,15 @@ def index():
         if not location or location not in LocationDict.keys() :
             flash("Invaild location", category="danger")
             return render_template("index.html", case_no=case_no, location=location, LocationList=LocationList)
-        result = query_ceac_state_safe(location,case_no)
+        if not passport_number or not surname:
+            flash("Passport number and surname are required for a new case", category="danger")
+            return render_template("index.html", case_no=case_no, location=location, LocationList=LocationList)
+        result = query_ceac_state_safe(location, case_no, passport_number, surname)
         if isinstance(result,str):
             flash(result, category="danger")
             return render_template("index.html", case_no=case_no, location=location, LocationList=LocationList)
-        case = Case(case_no=case_no,location=location, created_date=parse_date(result[1]))
+        case = Case(case_no=case_no, location=location, created_date=parse_date(result[1]),
+                    passport_number=passport_number, surname=surname)
         case.save()
         case.updateRecord(result)
         case.renew()
@@ -197,10 +214,14 @@ def detail_page(case_id):
             flash(f"Expire +{EXTENT_DAYS} days", category="success")
             case.renew()
         if act == "refresh":
-            result = query_ceac_state_safe(case.location,case.case_no)
+            if not case.passport_number or not case.surname:
+                flash("Passport number and surname are required to refresh this case.", category="danger")
+                result = None
+            else:
+                result = query_ceac_state_safe(case.location, case.case_no, case.passport_number, case.surname)
             if isinstance(result,str):
                 flash(result, category="danger")
-            else:
+            elif result is not None:
                 case.updateRecord(result)
         interview_date = request.form.get("interview_date",None)
         if interview_date:
