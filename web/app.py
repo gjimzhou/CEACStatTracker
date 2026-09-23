@@ -141,14 +141,14 @@ def import_case():
                 error_list.append(line+"\t># No Location")
                 continue
             
-            if Case.objects(case_no=case_no).count() == 1:
-                case = Case.objects(case_no=case_no).first()
-            else:
-                case = Case(case_no=case_no, location=location, created_date=parse_date(result[1]))
             result = query_ceac_state_safe(location,case_no)
             if isinstance(result,str):
                 error_list.append(line+"\t># "+result)
                 continue
+            if Case.objects(case_no=case_no).count() == 1:
+                case = Case.objects(case_no=case_no).first()
+            else:
+                case = Case(case_no=case_no, location=location, created_date=parse_date(result[1]))
             case.save()
             case.updateRecord(result, push_msg=False)
             case.renew()
