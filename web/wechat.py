@@ -6,8 +6,10 @@ import yaml
 from hashlib import sha1
 
 config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.yaml")
+config = {}
 if os.path.exists(config_path):
-    config = yaml.safe_load(open(config_path))
+    with open(config_path, "r") as config_file:
+        config = yaml.safe_load(config_file) or {}
 
 def check_wx_signature(signature, timestamp, nonce, token):
     if not signature or not timestamp or not nonce or not token:
@@ -35,7 +37,8 @@ def get_access_token():
         raise Exception(ret["errmsg"])
     config["accessToken"] = ret["access_token"]
     config["tokenExpires"] = timedelta(seconds=ret["expires_in"] - 300) + datetime.now()
-    yaml.dump(config, open("config.yaml","w"))
+    with open(config_path, "w") as config_file:
+        yaml.safe_dump(config, config_file)
 
     return config["accessToken"]
 
@@ -48,7 +51,8 @@ ArFK9lrJ57rW4t4QQ6bqtdt8IFsLFZkLlPfrHI5hlCo
 {{remark.DATA}}
 '''
 
-def wechat_msg_push(touser, tempID=config["tempID"], msg_url="", **kwargs):
+def wechat_msg_push(touser, tempID=None, msg_url="", **kwargs):
+    tempID = tempID or config["tempID"]
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={ACCESS_TOKEN}".format(
         ACCESS_TOKEN=get_access_token())
     data = {}
