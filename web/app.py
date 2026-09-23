@@ -36,7 +36,7 @@ class Case(db.Document):
     case_no = db.StringField(max_length=20, unique=True)
     location = db.StringField(max_length=5, choice=LocationList)
     last_update = db.ReferenceField("Record")
-    created_date = db.DateField(format)
+    created_date = db.DateField()
     last_seem = db.DateTimeField(default=datetime.datetime.now)
 
     push_channel = db.StringField(max_length=50)
