@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 from typing import List
 from flask import Flask, request,flash, abort, make_response
 from flask.templating import render_template
@@ -14,7 +15,7 @@ from .wechat import get_qr_code_url, config as wx_config, check_wx_signature, xm
 
 
 app = Flask(__name__)
-app.secret_key = "eawfopawjfoawe"
+app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32)
 app.config['MONGODB_SETTINGS'] = {
     'host': 'mongodb://localhost/CEACStateTracker',
     'connect': False,
