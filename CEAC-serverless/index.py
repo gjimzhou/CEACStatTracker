@@ -127,6 +127,7 @@ def query_ceac_state_safe(loc, case_no, pp_no, surname, soup=None):
 def main_handler(event, context):
     req = json.loads(event.body)
     ret = {}
+    soup = None
     for loc, case_no, pp_no, surname in req:
         result, soup = query_ceac_state_safe(
             loc, case_no, pp_no, surname, soup)
